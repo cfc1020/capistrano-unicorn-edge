@@ -1,0 +1,124 @@
+namespace :unicorn do
+  desc 'Start unicorn'
+  task :start do
+    on roles(fetch(:unicorn_roles)) do
+      unicorn_start unless unicorn_is_running?
+    end
+  end
+
+  desc 'Stop unicorn gracefully (QUIT)'
+  task :stop do
+    on roles(fetch(:unicorn_roles)) do
+      unicorn_send_signal(:QUIT) if unicorn_is_running?
+    end
+  end
+
+  desc 'Stop unicorn immediately (TERM)'
+  task :shutdown do
+    on roles(fetch(:unicorn_roles)) do
+      unicorn_send_signal('TERM') if unicorn_is_running?
+    end
+  end
+
+  desc 'Restart unicorn'
+  task :restart do
+    invoke "unicorn:#{fetch(:unicorn_restart_method)}"
+  end
+
+  desc 'Restart unicorn, when preload_app is false (HUP)'
+  task :restart_hup do
+    on roles(fetch(:unicorn_roles)) do
+      if unicorn_is_running?
+        unicorn_send_signal(:HUP)
+      else
+        unicorn_start
+      end
+    end
+  end
+
+  desc 'Restart unicorn, when before_fork hook is set and preload_app is true (USR2)'
+  task :restart_usr2 do
+    on roles(fetch(:unicorn_roles)) do
+      if unicorn_is_running?
+        unicorn_send_signal(:USR2)
+      else
+        unicorn_start
+      end
+    end
+  end
+
+  desc 'Restart unicorn, when before_fork hook is not set and preload_app is true (USR2 + QUIT)'
+  task :restart_usr2_quit do
+    on roles(fetch(:unicorn_roles)) do
+      if unicorn_is_running?
+        unicorn_send_signal(:USR2)
+
+        execute :sleep, fetch(:unicorn_restart_delay)
+
+        if unicorn_is_running?(unicorn_old_pid)
+          unicorn_send_signal(:QUIT, unicorn_old_pid)
+        end
+      else
+        unicorn_start
+      end
+    end
+  end
+
+  desc 'Add a worker (TTIN)'
+  task :add_worker, :count do |_, args|
+    on roles(fetch(:unicorn_roles)) do
+      if unicorn_is_running?
+        args.fetch(:count, 1).to_i.times do
+          unicorn_send_signal(:TTIN)
+        end
+      else
+        error 'unicorn is not running'
+      end
+    end
+  end
+
+  desc 'Remove a worker (TTOU)'
+  task :remove_worker, :count do |_, args|
+    on roles(fetch(:unicorn_roles)) do
+      if unicorn_is_running?
+        args.fetch(:count, 1).to_i.times do
+          unicorn_send_signal(:TTOU)
+        end
+      else
+        error 'unicorn is not running'
+      end
+    end
+  end
+
+  desc 'Stop all workers but keep the master running (WINCH)'
+  task :stop_workers do
+    if unicorn_is_running?
+      unicorn_send_signal(:WINCH)
+    else
+      error 'unicorn is not running'
+    end
+  end
+
+  desc 'Reopen all logs owned by the master and all workers (USR1)'
+  task :reopen_logs do
+    if unicorn_is_running?
+      unicorn_send_signal(:USR1)
+    else
+      error 'unicorn is not running'
+    end
+  end
+end
+
+namespace :load do
+  task :defaults do
+    set :unicorn_pid, -> { current_path.join('tmp/pids/unicorn.pid') }
+    set :unicorn_config, -> { current_path.join("config/unicorn/#{fetch(:rails_env)}.rb") }
+    set :unicorn_roles, :app
+    set :unicorn_options, ''
+    set :unicorn_restart_delay, 5
+    set :unicorn_rack_env, :deployment
+    set :unicorn_restart_method, :restart_usr2
+  end
+end
+
+after 'deploy:published', 'unicorn:restart'
