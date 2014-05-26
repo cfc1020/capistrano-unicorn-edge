@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
   spec.name          = "capistrano-unicorn-edge"
-  spec.version       = "0.1.4"
+  spec.version       = "0.1.5"
   spec.authors       = ["Alexander Menzhinsky"]
   spec.email         = ["amenzhinsky@gmail.com"]
   spec.summary       = %q{Unicorn support for Capistrano 3.x}
