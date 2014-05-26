@@ -36,7 +36,7 @@ namespace :unicorn do
     end
   end
 
-  desc 'Restart unicorn, when before_fork hook is set and preload_app is true (USR2)'
+  desc 'Restart unicorn, when before_fork hook is set (USR2)'
   task :restart_usr2 do
     on roles(fetch(:unicorn_roles)) do
       if unicorn_is_running?
@@ -47,7 +47,7 @@ namespace :unicorn do
     end
   end
 
-  desc 'Restart unicorn, when before_fork hook is not set and preload_app is true (USR2 + QUIT)'
+  desc 'Restart unicorn, when before_fork hook is not set (USR2 + QUIT)'
   task :restart_usr2_quit do
     on roles(fetch(:unicorn_roles)) do
       if unicorn_is_running?
@@ -61,6 +61,23 @@ namespace :unicorn do
       else
         unicorn_start
       end
+    end
+  end
+
+  desc 'Restart unicorn, simple stop it gracefully and start again (QUIT)'
+  task :restart_quit do
+    on roles(fetch(:unicorn_roles)) do
+      unicorn_send_signal(:QUIT) if unicorn_is_running?
+      execute :sleep, fetch(:unicorn_restart_delay)
+      unicorn_start
+    end
+  end
+
+  desc 'Restart unicorn, simple stop it immediately and start it again (TERM)'
+  task :restart_term do
+    on roles(fetch(:unicorn_roles)) do
+      unicorn_send_signal(:TERM) if unicorn_is_running?
+      unicorn_start
     end
   end
 

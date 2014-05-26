@@ -6,10 +6,12 @@ Unicorn specific tasks for Capistrano 3.x
 cap unicorn:start                  # Start unicorn
 cap unicorn:stop                   # Stop unicorn gracefully (QUIT)
 cap unicorn:shutdown               # Stop unicorn immediately (TERM)
-cap unicorn:restart                # Restart unicorn, invokes unicorn:restart_usr2
+cap unicorn:restart                # Restart unicorn
 cap unicorn:restart_hup            # Restart unicorn, when preload_app is false (HUP)
 cap unicorn:restart_usr2           # Restart unicorn, when before_fork hook is set and preload_app is true (USR2)
 cap unicorn:restart_usr2_quit      # Restart unicorn, when before_fork hook is not set and preload_app is true (USR2 + QUIT)
+cat unicorn:restart_quit           # Restart unicorn, simple stop it gracefully and start again (QUIT)
+cat unicorn:restart_term           # Restart unicorn, simple stop it immediately and start it again (TERM)
 cap unicorn:add_worker[count]      # Add a worker (TTIN)
 cap unicorn:remove_worker[count]   # Remove a worker (TTOU)
 cap unicorn:stop_workers           # Stop all workers but keep the master running (WINCH)
@@ -55,9 +57,13 @@ set :unicorn_restart_method, :restart_usr2 # this is default
 Everything should work **out of the box** but you need to **set up unicorn's config**. (see an example `examples/unicorn.rb`).
 
 There are three different ways to restart server:
-  * `:restart_hup` reloads config file and gracefully restart all workers, if `preload_app` is true, then application code changes will have no effect
-  * `:restart_usr2_quit` re-executes the running binary and kills previous instance in a time interval specified in `:unicorn_restart_delay`, but this method can't be absolutely reliable
-  * `:restart_usr2` the same as above but `before_fork` hook has to be set, default and the best choice
+* `:restart_hup` restarts all workers and therefore all code changes, makes sense if `preload_app` is false
+* `:restart_usr2_quit` re-executes the running binary and stops previous instance in `:unicorn_restart_delay`
+* `:restart_usr2` the same as above but `before_fork` hook has to be set, default and the best choice
+* `:restart_quit` stops server gracefully and starts it again in `:unicorn_restart_delay`
+* `:restart_term` stops server immediately and starts it again
+
+Using methods which are based on `QUIT` signal can't be absolutely reliable
 
 ## Contributing
 
